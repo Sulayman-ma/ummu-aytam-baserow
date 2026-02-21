@@ -2,6 +2,8 @@ import logging
 import os
 from typing import Dict
 
+import google_auth_httplib2
+import httplib2
 import requests
 from dotenv import load_dotenv
 from flask import Flask, Response, abort, request
@@ -13,18 +15,19 @@ from weasyprint import HTML
 # --- LOGGING CONFIGURATION ---
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-load_dotenv()
-
-# --- CONFIGURATION ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+env_path = os.path.join(BASE_DIR, ".env")
+load_dotenv(env_path)
+
+# --- CONFIGURATION ---
 BASEROW_API_URL = os.getenv("BASEROW_API_URL")
 BASEROW_TOKEN = os.getenv("BASEROW_TOKEN")
 TABLE_ID = os.getenv("TABLE_ID")
@@ -40,10 +43,26 @@ API_ENDPOINT = os.getenv(
 # Set up Google Drive Client
 try:
     creds = service_account.Credentials.from_service_account_file(
-        str(GOOGLE_CREDENTIALS_FILE), scopes=["https://www.googleapis.com/auth/drive"]
+        GOOGLE_CREDENTIALS_FILE, scopes=["https://www.googleapis.com/auth/drive"]
     )
-    drive_service = build("drive", "v3", credentials=creds)
-    logger.info("Google Drive service initialized successfully.")
+
+    # Explicitly define the PythonAnywhere proxy
+    proxy_info = httplib2.ProxyInfo(
+        proxy_type=httplib2.socks.PROXY_TYPE_HTTP,
+        proxy_host="proxy.server",
+        proxy_port=3128,
+    )
+
+    # Attach the proxy to an httplib2 instance
+    http_instance = httplib2.Http(proxy_info=proxy_info)
+
+    # Bind your credentials to the proxied http instance
+    authed_http = google_auth_httplib2.AuthorizedHttp(creds, http=http_instance)
+
+    # Pass the proxied http to the build function
+    drive_service = build("drive", "v3", http=authed_http)
+
+    logger.info("Google Drive service initialized successfully with Proxy routing.")
 except Exception as e:
     logger.error(f"Failed to initialize Google Drive service: {e}", exc_info=True)
 
@@ -52,7 +71,7 @@ except Exception as e:
 @app.route("/student-details/<int:student_id>", methods=["GET"])
 def generate_sponsor_pdf(student_id):
     logger.info(f"PDF generation requested for student ID: {student_id}")
-    
+
     headers = {
         "Authorization": f"Token {BASEROW_TOKEN}",
         "Content-Type": "application/json",
@@ -64,7 +83,9 @@ def generate_sponsor_pdf(student_id):
     )
 
     if response.status_code != 200:
-        logger.warning(f"Failed to fetch student {student_id} from Baserow. Status: {response.status_code}")
+        logger.warning(
+            f"Failed to fetch student {student_id} from Baserow. Status: {response.status_code}"
+        )
         abort(404, description="Student record not found")
 
     student_data = response.json()
@@ -90,7 +111,7 @@ def handle_new_record():
     logger.info("--- Incoming Webhook Triggered ---")
     try:
         payload: Dict = request.get_json()
-        
+
         # Verify event type
         if payload.get("event_type") != "rows.created":
             logger.info(f"Ignored webhook. Event type was: {payload.get('event_type')}")
@@ -114,7 +135,7 @@ def handle_new_record():
 
         student_name = student_data.get("Full Name", "Unknown")
         table_id = payload.get("table_id")
-        
+
         logger.info(f"Processing new record: {student_name} (ID: {row_id})")
 
         # Create the Google Drive Folder
@@ -144,21 +165,22 @@ def handle_new_record():
             "Content-Type": "application/json",
         }
 
-        # Be careful here: ensure BASEROW_API_URL ends with a slash in your .env file!
         update_url = f"{BASEROW_API_URL}{table_id}/{row_id}/?user_field_names=true"
         update_data = {"Google Drive Link": folder_link, "Profile": profile_link}
 
         response = requests.patch(update_url, headers=headers, json=update_data)
-        
+
         # If Baserow rejects the update, log exactly why before crashing
         if not response.ok:
-            logger.error(f"Baserow Update Failed! Status: {response.status_code}, Response Data: {response.text}")
-            
+            logger.error(
+                f"Baserow Update Failed! Status: {response.status_code}, Response Data: {response.text}"
+            )
+
         response.raise_for_status()
 
         logger.info(f"--- Successfully processed and updated student {row_id} ---")
         return {"status": "success", "folder_name": folder_name, "link_added": True}
-        
+
     except Exception as e:
         # exc_info=True prints the full traceback to the logs so you can find the exact line
         logger.error(f"CRITICAL ERROR in webhook: {str(e)}", exc_info=True)
