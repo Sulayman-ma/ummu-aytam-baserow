@@ -73,7 +73,7 @@ def generate_sponsor_pdf(student_id):
 
 
 # --- Baserow Webhook Receiver ---
-@app.route("/create-folder", methods=["POST"])
+@app.route("/handle-new-record", methods=["POST"])
 def handle_new_record():
     try:
         payload: Dict = request.get_json()
