@@ -14,20 +14,23 @@ app = Flask(__name__)
 load_dotenv()
 
 # --- CONFIGURATION ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 BASEROW_API_URL = os.getenv("BASEROW_API_URL")
 BASEROW_TOKEN = os.getenv("BASEROW_TOKEN")
 TABLE_ID = os.getenv("TABLE_ID")
 
-GOOGLE_CREDENTIALS_FILE = "service_account.json"
+GOOGLE_CREDENTIALS_FILE = os.path.join(BASE_DIR, "service_account.json")
 GOOGLE_DRIVE_PARENT_FOLDER_ID = os.getenv("GOOGLE_DRIVE_PARENT_FOLDER_ID")
 
+TEMPLATE_FILE = os.path.join(BASE_DIR, "profile_template.html")
 API_ENDPOINT = os.getenv(
     "API_ENDPOINT", "https://localhost:8000"
 )  # Defaults to localhost when testing
 
 # Set up Google Drive Client
 creds = service_account.Credentials.from_service_account_file(
-    GOOGLE_CREDENTIALS_FILE, scopes=["https://www.googleapis.com/auth/drive"]
+    str(GOOGLE_CREDENTIALS_FILE), scopes=["https://www.googleapis.com/auth/drive"]
 )
 drive_service = build("drive", "v3", credentials=creds)
 
@@ -54,7 +57,7 @@ def generate_sponsor_pdf(student_id):
     student_data = response.json()
 
     # Read the template from the standalone HTML file
-    with open("profile_template.html", "r", encoding="utf-8") as file:
+    with open(TEMPLATE_FILE, "r", encoding="utf-8") as file:
         html_template = file.read()
 
     # Render template with student data and write to PDF with weasyprint
