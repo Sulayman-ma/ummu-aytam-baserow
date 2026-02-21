@@ -152,8 +152,21 @@ def handle_new_record():
             .create(body=folder_metadata, fields="id, webViewLink")
             .execute()
         )
+        folder_id = folder.get("id")
         folder_link = folder.get("webViewLink")
         logger.info(f"Folder created successfully. Link: {folder_link}")
+
+        logger.info("Updating folder permissions to public read-only...")
+        permission_metadata = {
+            "type": "anyone",
+            "role": "reader"
+        }
+        drive_service.permissions().create(
+            fileId=folder_id,
+            body=permission_metadata,
+            fields="id"
+        ).execute()
+        logger.info("Permissions updated successfully.")
 
         # Form profile link
         profile_link = f"{API_ENDPOINT}/student-details/{row_id}"
