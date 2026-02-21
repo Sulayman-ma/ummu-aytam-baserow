@@ -101,7 +101,9 @@ def generate_sponsor_pdf(student_id):
     return Response(
         pdf_bytes,
         mimetype="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="student_{student_id}.pdf"'},
+        headers={
+            "Content-Disposition": f'inline; filename="{student_data.get("Full Name", "Student")}_{student_id}.pdf"'
+        },
     )
 
 
@@ -157,14 +159,9 @@ def handle_new_record():
         logger.info(f"Folder created successfully. Link: {folder_link}")
 
         logger.info("Updating folder permissions to public read-only...")
-        permission_metadata = {
-            "type": "anyone",
-            "role": "reader"
-        }
+        permission_metadata = {"type": "anyone", "role": "reader"}
         drive_service.permissions().create(
-            fileId=folder_id,
-            body=permission_metadata,
-            fields="id"
+            fileId=folder_id, body=permission_metadata, fields="id"
         ).execute()
         logger.info("Permissions updated successfully.")
 
