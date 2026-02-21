@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #333;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        .header-table {
+            width: 100%;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .photo-cell {
+            width: 130px;
+            vertical-align: top;
+        }
+        .photo-box {
+            width: 120px;
+            height: 150px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            text-align: center;
+            overflow: hidden;
+            border-radius: 4px;
+        }
+        .photo-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .info-cell {
+            vertical-align: top;
+            padding-left: 20px;
+        }
+        h1 {
+            margin: 0 0 5px 0;
+            color: #2c3e50;
+            font-size: 26px;
+        }
+        .id-text {
+            color: #7f8c8d;
+            font-size: 18px;
+            font-weight: normal;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            background-color: #27ae60;
+            color: white;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 8px;
+        }
+        .section-title {
+            background-color: #ecf0f1;
+            color: #2c3e50;
+            padding: 8px 12px;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            border-left: 4px solid #3498db;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+        }
+        .data-table td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            vertical-align: top;
+        }
+        .label {
+            width: 35%;
+            font-weight: bold;
+            color: #555;
+        }
+        .medical-alert {
+            border: 1px solid #e74c3c;
+            background-color: #fadbd8;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+        .medical-alert h4 {
+            color: #c0392b;
+            margin-top: 0;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <table class="header-table">
+        <tr>
+            <td class="photo-cell">
+                <div class="photo-box">
+                    {% if student.get('Student Photo') %}
+                        <img src="{{ student['Student Photo'][0]['url'] }}" alt="Student Photo">
+                    {% else %}
+                        <div style="padding-top: 65px; color: #aaa; font-size: 12px;">No Photo</div>
+                    {% endif %}
+                </div>
+            </td>
+            <td class="info-cell">
+                <h1>{{ student.get('Full Name', 'Unknown') }} <span class="id-text">(#{{ student.get('id', 'N/A') }})</span></h1>
+                
+                {% if student.get('Scholarship Status') %}
+                    <div class="status-badge">{{ student['Scholarship Status']['value'] }}</div>
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+
+    <div class="section-title">Personal Details</div>
+    <table class="data-table">
+        <tr>
+            <td class="label">Date of Birth</td>
+            <td>{{ student.get('Date of Birth') or 'N/A' }}</td>
+        </tr>
+        <tr>
+            <td class="label">Gender</td>
+            <td>{{ student['Gender']['value'] if student.get('Gender') else 'N/A' }}</td>
+        </tr>
+        <tr>
+            <td class="label">State of Origin</td>
+            <td>{{ student['State of Origin'][0]['value'] if student.get('State of Origin') else 'N/A' }}</td>
+        </tr>
+        <tr>
+            <td class="label">Local Government Area (LGA)</td>
+            <td>{{ student.get('LGA') or 'N/A' }}</td>
+        </tr>
+    </table>
+
+    <div class="section-title">Academic Information</div>
+    <table class="data-table">
+        <tr>
+            <td class="label">Present School</td>
+            <td>{{ student['Present School'][0]['value'] if student.get('Present School') else 'N/A' }}</td>
+        </tr>
+        <tr>
+            <td class="label">Last School Attended</td>
+            <td>{{ student['Last School'][0]['value'] if student.get('Last School') else 'N/A' }}</td>
+        </tr>
+    </table>
+
+    <div class="section-title">Health & Contact</div>
+    <table class="data-table" style="margin-bottom: 10px;">
+        <tr>
+            <td class="label">Mother/Guardian Phone</td>
+            <td>{{ student.get('Mother or Guardian Phone No.') or 'N/A' }}</td>
+        </tr>
+    </table>
+
+    {% if student.get('Medical Issues') %}
+    <div class="medical-alert">
+        <h4>Medical Issues / Notes</h4>
+        <p style="margin: 0;">{{ student.get('Medical Issues') or 'N/A' }}</p>
+    </div>
+    {% endif %}
+
+</body>
+</html>
